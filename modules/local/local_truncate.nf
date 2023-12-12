@@ -34,9 +34,9 @@ process LOCAL_TRUNCATE {
     def chunksize = params['map'].get('chunksize', 0)
 
     def truncate_chunk_cmd1 = fastqLocalTruncateChunkCmd(
-        fastq1, library, run, 1, truncate_fastq_reads, chunksize, task.cpus)
+        query1, library, run, 1, truncate_fastq_reads, chunksize, task.cpus)
     def truncate_chunk_cmd2 = fastqLocalTruncateChunkCmd(
-        fastq2, library, run, 2, truncate_fastq_reads, chunksize, task.cpus)
+        query2, library, run, 2, truncate_fastq_reads, chunksize, task.cpus)
 
     """
     ${truncate_chunk_cmd1}
