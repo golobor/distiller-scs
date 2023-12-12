@@ -6,20 +6,6 @@ options        = initOptions(params.options)
 directory      = getOutputDir('mapped_parsed_sorted_chunks')
 
 ASSEMBLY_NAME = params['input'].genome.assembly_name // TODO: move to the parameters dictionary, and below:
-switch(params.compression_format) {
-    case 'gz':
-        suffix = 'gz'
-        decompress_command = 'bgzip -cd -@ 3'
-        break
-    case 'lz4':
-        suffix = 'lz4'
-        decompress_command = 'lz4c -cd'
-        break
-    default:
-        suffix = 'gz'
-        decompress_command = 'bgzip -cd -@ 3'
-        break
-}
 
 process MAP_PARSE_SORT{
     tag "library:${library} run:${run}"
@@ -40,7 +26,7 @@ process MAP_PARSE_SORT{
 
     output:
     tuple val(library), val(run), val(chunk),
-        path("${library}.${run}.${ASSEMBLY_NAME}.${chunk}.pairsam.${suffix}"),
+        path("${library}.${run}.${ASSEMBLY_NAME}.${chunk}.pairsam.${params.suffix}"),
         path("${library}.${run}.${ASSEMBLY_NAME}.${chunk}.bam"), emit: output
     path  "*.version.txt"         , emit: version
 
@@ -51,27 +37,25 @@ process MAP_PARSE_SORT{
     def mapping_options = params['map'].getOrDefault('mapping_options','')
     def trim_options = params['map'].getOrDefault('trim_options','')
 
-    def dropsam_flag = params['parse'].getOrDefault('make_pairsam','false').toBoolean() ? '' : '--drop-sam'
     def dropreadid_flag = params['parse'].getOrDefault('drop_readid','false').toBoolean() ? '--drop-readid' : ''
-    def dropseq_flag = params['parse'].getOrDefault('drop_seq','false').toBoolean() ? '--drop-seq' : ''
-    def keep_unparsed_bams_command = (
+    def keep_unparsed_bams_cmd = (
         params['parse'].getOrDefault('keep_unparsed_bams','false').toBoolean() ?
         "| tee >(samtools view -bS > ${library}.${run}.${ASSEMBLY_NAME}.${chunk}.bam)" : "" )
     def parsing_options = params['parse'].getOrDefault('parsing_options','')
     def bwa_threads = (task.cpus as int)
     def sorting_threads = (task.cpus as int)
 
-    def mapping_command = (
+    def mapping_cmd = (
         trim_options ?
         "fastp ${trim_options} \
         --json ${library}.${run}.${ASSEMBLY_NAME}.${chunk}.fastp.json \
         --html ${library}.${run}.${ASSEMBLY_NAME}.${chunk}.fastp.html \
         -i ${fastq1} -I ${fastq2} --stdout | \
         bwa mem -p -t ${bwa_threads} ${mapping_options} -SP ${bwa_index_base} \
-        - ${keep_unparsed_bams_command}" : \
+        - ${keep_unparsed_bams_cmd}" : \
         \
         "bwa mem -t ${bwa_threads} ${mapping_options} -SP ${bwa_index_base} \
-        ${fastq1} ${fastq2} ${keep_unparsed_bams_command}"
+        ${fastq1} ${fastq2} ${keep_unparsed_bams_cmd}"
         )
 
 
@@ -79,14 +63,16 @@ process MAP_PARSE_SORT{
     TASK_TMP_DIR=\$(mktemp -d -p ${task.distillerTmpDir} distiller.tmp.XXXXXXXXXX)
     touch ${library}.${run}.${ASSEMBLY_NAME}.${chunk}.bam
 
-    ${mapping_command} \
-    | pairtools parse ${dropsam_flag} ${dropreadid_flag} ${dropseq_flag} \
+    ${mapping_cmd} \
+    | pairtools parse ${dropreadid_flag}  \
       ${parsing_options} \
       -c ${chrom_sizes} \
       | pairtools sort --nproc ${sorting_threads} \
-                     -o ${library}.${run}.${ASSEMBLY_NAME}.${chunk}.pairsam.${suffix} \
                      --tmpdir \$TASK_TMP_DIR \
+      | python ${baseDir}/bin/detect_s4t_mutations.py --chunksize 5000000 --drop-sam \
+        -o ${library}.${run}.${ASSEMBLY_NAME}.${chunk}.pairsam.${params.suffix} - \
       | cat
+
 
     rm -rf \$TASK_TMP_DIR
 
