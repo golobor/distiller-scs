@@ -5,23 +5,6 @@ params = [:]
  * Miscellaneous code for the pipeline
  */
 
-pairsgz_decompress_command = 'bgzip -cd -@ 3'
-
-switch(params.compression_format) {
-    case 'gz':
-        suffix = 'gz'
-        decompress_command = 'bgzip -cd -@ 3'
-        break
-    case 'lz4':
-        suffix = 'lz4'
-        decompress_command = 'lz4c -cd'
-        break
-    default:
-        suffix = 'gz'
-        decompress_command = 'bgzip -cd -@ 3'
-        break
-}
-
 boolean isSingleFile(object) {
     object instanceof Path
 }
