@@ -8,7 +8,7 @@ directory      = getOutputDir('stats_library_group')
 
 ASSEMBLY_NAME = params['input'].genome.assembly_name // TODO: move to the parameters dictionary
 
-process MERGE_STATS {
+process merge_stats {
     tag "library_group:${library_group}"
     label 'process_low'
     publishDir "${directory}", mode: params.publish_dir_mode

@@ -6,7 +6,7 @@ params.options = [:]
 options        = initOptions(params.options)
 directory = getOutputDir('processed_fastqs')
 
-process DOWNLOAD_TRUNCATE {
+process download_truncate {
     tag "library:${library} run:${run}"
     label 'process_low'
     publishDir "${directory}", mode: params.publish_dir_mode

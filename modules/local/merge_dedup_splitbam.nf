@@ -9,7 +9,7 @@ directory      = getOutputDir('pairs_library')
 ASSEMBLY_NAME = params['input'].genome.assembly_name // TODO: move to the parameters dictionary, and below:
 
 
-process MERGE_DEDUP_SPLITBAM {
+process merge_dedup_splitbam {
     tag "library:${library} run:${run}"
     label 'process_medium'
     publishDir "${directory}", mode: params.publish_dir_mode

@@ -7,7 +7,7 @@ directory      = getOutputDir('mapped_parsed_sorted_chunks')
 
 ASSEMBLY_NAME = params['input'].genome.assembly_name // TODO: move to the parameters dictionary, and below:
 
-process MAP_PARSE_SORT{
+process map_parse_sort_chunk_scs{
     tag "library:${library} run:${run}"
     label 'process_low'
     publishDir "${directory}", mode: params.publish_dir_mode

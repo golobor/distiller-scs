@@ -5,7 +5,7 @@ params.options = [:]
 options        = initOptions(params.options)
 directory      = getOutputDir('fastqc')
 
-process FASTQC {
+process fastqc {
     tag "library:${library} run:${run} chunk:${chunk} side:${side}"
     label 'process_low'
     publishDir "${directory}", mode: params.publish_dir_mode

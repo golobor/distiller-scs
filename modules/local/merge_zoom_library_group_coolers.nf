@@ -7,9 +7,8 @@ directory      = getOutputDir('coolers_library_group')
 
 MIN_RES = params['bin'].resolutions.collect { it as int }.min() // TODO: move to parameters dictionary
 ASSEMBLY_NAME = params['input'].genome.assembly_name // TODO: move to the parameters dictionary
-pairsgz_decompress_command = 'bgzip -cd -@ 3'
 
-process MERGE_ZOOM {
+process merge_zoom {
     tag "library:${library} filter:${filter_name}"
     label 'process_medium'
     publishDir "${directory}", mode: params.publish_dir_mode
@@ -41,17 +40,17 @@ process MERGE_ZOOM {
     // balancing flag if it's requested
     def balance_flag = ( params['bin'].get('balance','false').toBoolean() ? "--balance ${balance_options}" : "--no-balance" )
 
-    def merge_command = ""
+    def merge_cmd = ""
     if( isSingleFile(coolers))
-        merge_command = """
+        merge_cmd = """
             ln -s \$(readlink -f ${coolers}) ${library_group}.${ASSEMBLY_NAME}.${filter_name}.${MIN_RES}.cool
         """
     else
-        merge_command = """
+        merge_cmd = """
             cooler merge ${library_group}.${ASSEMBLY_NAME}.${filter_name}.${MIN_RES}.cool ${coolers}
         """
 
-    zoom_command = """
+    zoom_cmd = """
     cooler zoomify \
         --nproc ${task.cpus} \
         --out ${library_group}.${ASSEMBLY_NAME}.${filter_name}.${MIN_RES}.mcool \
@@ -61,8 +60,8 @@ process MERGE_ZOOM {
     """
 
     """
-    ${merge_command}
-    ${zoom_command}
+    ${merge_cmd}
+    ${zoom_cmd}
 
     cooler --version > ${software}.version.txt
     """
