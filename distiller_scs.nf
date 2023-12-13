@@ -23,12 +23,12 @@ MIN_RES = params['bin'].resolutions.collect { it as int }.min() // TODO: move to
 ASSEMBLY_NAME = params['input'].genome.assembly_name // TODO: move to the parameters dictionary
 
 // Include modules and subworkflows
-include { DOWNLOAD_TRUNCATE as download_truncate_chunk_fastqs } from './modules/local/download_truncate' addParams( options: [:] )
-include { LOCAL_TRUNCATE as local_truncate_chunk_fastqs } from './modules/local/local_truncate' addParams( options: [:] )
-include { FASTQC as fastqc } from './modules/local/fastqc' addParams( options: [:] )
-include { MAP_PARSE_SORT as map_parse_sort_chunks } from './modules/local/map_parse_sort' addParams( options: [:] )
-include { MERGE_DEDUP_SPLITBAM as merge_dedup_splitbam } from './modules/local/merge_dedup_splitbam' addParams( options: [:] )
-// include { BIN_ZOOM as bin_zoom_library_pairs } from './modules/local/bin_zoom_library_pairs' addParams( options: [:] )
+include { download_truncate } from './modules/local/download_truncate' addParams( options: [:] )
+include { local_truncate } from './modules/local/local_truncate' addParams( options: [:] )
+include { fastqc } from './modules/local/fastqc' addParams( options: [:] )
+include { map_parse_sort_chunk_scs } from './modules/local/map_parse_sort' addParams( options: [:] )
+include { merge_dedup_splitbam } from './modules/local/merge_dedup_splitbam' addParams( options: [:] )
+include { bin_zoom; bin_zoom_scs } from './modules/local/bin_zoom_library_pairs' addParams( options: [:] )
 // include { MERGE_ZOOM as merge_zoom_library_group_coolers } from './modules/local/merge_zoom_library_group_coolers' addParams( options: [:] )
 // include { MERGE_STATS as merge_stats_libraries_into_groups } from './modules/local/merge_stats_libraries_into_groups' addParams( options: [:] )
 // include { MULTIQC } from './modules/local/multiqc/main.nf' addParams( options: [:] )
@@ -37,9 +37,7 @@ include { MERGE_DEDUP_SPLITBAM as merge_dedup_splitbam } from './modules/local/m
 workflow DISTILLER {
 
     // CHROM_SIZES:
-    CHROM_SIZES = Channel.from([
-              file(params.input.genome.chrom_sizes_path)
-                 ])
+    CHROM_SIZES = Channel.fromPath(params.input.genome.chrom_sizes_path)
 
     // LIBRARY_GROUPS:
     LIBRARY_GROUPS = Channel.from(
@@ -64,8 +62,8 @@ workflow DISTILLER {
         }
 
     /* Download or truncate input data */
-    fastq_download_truncated = download_truncate_chunk_fastqs( RUN_SOURCES.download_truncate ).output
-    fastq_local_truncated = local_truncate_chunk_fastqs( RUN_SOURCES.local_truncate ).output
+    fastq_download_truncated = download_truncate( RUN_SOURCES.download_truncate ).output
+    fastq_local_truncated = local_truncate( RUN_SOURCES.local_truncate ).output
 
     FASTQ = fastq_download_truncated
         .mix(fastq_local_truncated)
@@ -99,7 +97,8 @@ workflow DISTILLER {
             bwa_index: it[5..6]
             chrom_sizes: it[7]
         }
-    BAM = map_parse_sort_chunks( INPUT_MAPPING ).output
+
+    BAM = map_parse_sort_chunk_scs( INPUT_MAPPING ).output
 
     /* Merge .pairsams into libraries */
     INPUT_DEDUP = BAM
@@ -115,16 +114,28 @@ workflow DISTILLER {
 //    }
 
     /* Bin indexed .pairs into .cool matrices */
-    // FILTERS = Channel.from( params.bin.filters.collect{ name, expr -> [name, expr] } )
-    // INPUT_BIN = FILTERS
-    //             .combine( PAIRS.output.map {v -> [v[0], v[1]]} )
-    //             .combine(CHROM_SIZES)
-    //             .multiMap{ it ->
-    //                 filter: it[0..1]
-    //                 pairs: it[2..3]
-    //                 chrom_sizes: it[4]
-    //             }
-    // COOLERS = bin_zoom_library_pairs( INPUT_BIN ).output
+    FILTERS = Channel.from( params.bin.filters.collect{ name, expr -> [name, expr] } )
+    
+    INPUT_BIN_ALL = FILTERS
+                .combine(PAIRS.all_pairs)
+                .combine(CHROM_SIZES)
+                .multiMap{ it ->
+                    filter: it[0..1]
+                    pairs: it[2..3]
+                    chrom_sizes: it[4]
+                }
+    COOLERS_ALL = bin_zoom( INPUT_BIN_ALL ).cools
+
+    INPUT_BIN_SCS = FILTERS
+                .combine(PAIRS.scs_pairs)
+                .combine(CHROM_SIZES)
+                .multiMap{ it ->
+                    filter: it[0..1]
+                    pairs: it[2..6]
+                    chrom_sizes: it[7]
+                }
+    COOLERS_SCS = bin_zoom_scs( INPUT_BIN_SCS ).cools
+
 
     // /* Merge coolers by groups */
     // INPUT_COOLERS_MERGE = LIBRARY_GROUPS.combine(COOLERS)
