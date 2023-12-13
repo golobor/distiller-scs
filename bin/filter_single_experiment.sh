@@ -35,7 +35,7 @@ IS_TRANS="(${IS_TRANS_12} or ${IS_TRANS_21})"
 echo "filtering..."
 
 pairtools select "(${MAPQ_FILTER} and ${IS_CIS_11})" ${INPUT_S4T_PAIRS} \
-    -o ${OUTPUT_FOLDER}/${SAMPLE}.cis_12.pairs.gz
+    -o ${OUTPUT_FOLDER}/${SAMPLE}.cis_11.pairs.gz
 
 pairtools select "(${MAPQ_FILTER} and ${IS_CIS_22})" ${INPUT_S4T_PAIRS} \
     -o ${OUTPUT_FOLDER}/${SAMPLE}.cis_22.pairs.gz
